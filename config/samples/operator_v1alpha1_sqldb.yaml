@@ -1,0 +1,9 @@
+apiVersion: operator.k8s.io/v1alpha1
+kind: SqlDB
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: sqldb-sample
+spec:
+  # Add fields here
+  foo: bar
