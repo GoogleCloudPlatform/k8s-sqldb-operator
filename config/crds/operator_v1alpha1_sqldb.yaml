@@ -27,8 +27,48 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            backupName:
+              description: Name of SQLBackup resource. If specified, it means creating
+                the database instances loaded with backup data.
+              type: string
+            disk:
+              description: Details of underlying disk that stores SQL dumps.
+              properties:
+                sizeTB:
+                  description: Disk size in TB. Default to 0.1 if not specified.
+                  format: float
+                  type: number
+                type:
+                  description: Disk type. Currently support only "ZonalPersistentDisk"
+                    type for demo purpose. Default to "ZonalPersistentDisk" if not
+                    specified.
+                  type: string
+              type: object
+            replicas:
+              description: Number of database instances. Default to 1 if not specified.
+              format: int32
+              type: integer
+            type:
+              description: Database type. Currently support "PostgreSQL" and "MySQL"
+                types.
+              type: string
+            version:
+              description: Version of the database (e.g., "1.5.1", "latest"). Default
+                to "latest" if not specified.
+              type: string
+          required:
+          - type
+          - disk
           type: object
         status:
+          properties:
+            endpoints:
+              description: Endpoints of database instances. The number of endpoints
+                should be equal to the number of database instances.
+              items:
+                type: string
+              type: array
           type: object
   version: v1alpha1
 status:

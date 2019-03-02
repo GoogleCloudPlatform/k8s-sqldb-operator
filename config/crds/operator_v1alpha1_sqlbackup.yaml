@@ -27,8 +27,19 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            sqlDBName:
+              description: Name of SqlDB resource that has its database instances
+                performed backup with.
+              type: string
+          required:
+          - sqlDBName
           type: object
         status:
+          properties:
+            succeeded:
+              description: Backup status. True if backup has succeeded.
+              type: boolean
           type: object
   version: v1alpha1
 status:

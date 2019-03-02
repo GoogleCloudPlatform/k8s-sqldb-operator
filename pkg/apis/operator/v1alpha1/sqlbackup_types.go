@@ -20,19 +20,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // SqlBackupSpec defines the desired state of SqlBackup
 type SqlBackupSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Name of SqlDB resource that has its database instances performed backup with.
+	SqlDBName string `json:"sqlDBName"`
 }
 
 // SqlBackupStatus defines the observed state of SqlBackup
 type SqlBackupStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Backup status.
+	// True if backup has succeeded.
+	Succeeded bool `json:"succeeded,omitempty"`
 }
 
 // +genclient

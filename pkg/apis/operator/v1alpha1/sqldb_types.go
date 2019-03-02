@@ -20,19 +20,61 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type SqlDatabaseType string
+
+const (
+	// PostgreSQL database.
+	PostgreSQL SqlDatabaseType = "PostgreSQL"
+
+	// MySQL database.
+	MySQL SqlDatabaseType = "MySQL"
+)
+
+type SqlDiskType string
+
+const (
+	// Zonal standard persistent disk.
+	ZonalPersistentDisk SqlDiskType = "ZonalPersistentDisk"
+)
 
 // SqlDBSpec defines the desired state of SqlDB
 type SqlDBSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Database type.
+	// Currently support "PostgreSQL" and "MySQL" types.
+	Type SqlDatabaseType `json:"type"`
+
+	// Version of the database (e.g., "1.5.1", "latest").
+	// Default to "latest" if not specified.
+	Version *string `json:"version,omitempty"`
+
+	// Number of database instances.
+	// Default to 1 if not specified.
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Name of SQLBackup resource.
+	// If specified, it means creating the database instances loaded with backup data.
+	BackupName *string `json:"backupName,omitempty"`
+
+	// Details of underlying disk that stores SQL dumps.
+	Disk SqlDisk `json:"disk"`
+}
+
+type SqlDisk struct {
+	// Disk type.
+	// Currently support only "ZonalPersistentDisk" type for demo purpose.
+	// Default to "ZonalPersistentDisk" if not specified.
+	Type *SqlDiskType `json:"type,omitempty"`
+
+	// Disk size in TB.
+	// Default to 0.1 if not specified.
+	SizeTB *float32 `json:"sizeTB,omitempty"`
 }
 
 // SqlDBStatus defines the observed state of SqlDB
 type SqlDBStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Endpoints of database instances.
+	// The number of endpoints should be equal to the number of database instances.
+	Endpoints []string `json:"endpoints,omitempty"`
 }
 
 // +genclient
