@@ -20,28 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type SqlDatabaseType string
+type DBType string
 
 const (
 	// PostgreSQL database.
-	PostgreSQL SqlDatabaseType = "PostgreSQL"
+	PostgreSQL DBType = "PostgreSQL"
 
 	// MySQL database.
-	MySQL SqlDatabaseType = "MySQL"
+	MySQL DBType = "MySQL"
 )
 
-type SqlDiskType string
+type DiskType string
 
 const (
 	// Zonal standard persistent disk.
-	ZonalPersistentDisk SqlDiskType = "ZonalPersistentDisk"
+	ZonalPersistentDisk DiskType = "ZonalPersistentDisk"
 )
 
 // SqlDBSpec defines the desired state of SqlDB
 type SqlDBSpec struct {
-	// Database type.
+	// Sql database type.
 	// Currently support "PostgreSQL" and "MySQL" types.
-	Type SqlDatabaseType `json:"type"`
+	Type DBType `json:"type"`
 
 	// Version of the database (e.g., "1.5.1", "latest").
 	// Default to "latest" if not specified.
@@ -51,27 +51,31 @@ type SqlDBSpec struct {
 	// Default to 1 if not specified.
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Name of SQLBackup resource.
+	// Name of RelationalBackup resource.
 	// If specified, it means creating the database instances loaded with backup data.
 	BackupName *string `json:"backupName,omitempty"`
 
 	// Details of underlying disk that stores SQL dumps.
-	Disk SqlDisk `json:"disk"`
+	Disk DBDisk `json:"disk"`
 }
 
-type SqlDisk struct {
+type DBDisk struct {
 	// Disk type.
 	// Currently support only "ZonalPersistentDisk" type for demo purpose.
 	// Default to "ZonalPersistentDisk" if not specified.
-	Type *SqlDiskType `json:"type,omitempty"`
+	Type *DiskType `json:"type,omitempty"`
 
-	// Disk size in TB.
-	// Default to 0.1 if not specified.
-	SizeTB *float32 `json:"sizeTB,omitempty"`
+	// Disk size in GB.
+	// Default to 10 if not specified.
+	SizeGB *int32 `json:"sizeGB,omitempty"`
 }
 
 // SqlDBStatus defines the observed state of SqlDB
 type SqlDBStatus struct {
+	// Status of deployment of database instances.
+	// True if the deployment has completed successfully.
+	Ready bool `json:"succeeded,omitempty"`
+
 	// Endpoints of database instances.
 	// The number of endpoints should be equal to the number of database instances.
 	Endpoints []string `json:"endpoints,omitempty"`

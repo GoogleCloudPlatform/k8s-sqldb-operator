@@ -29,16 +29,16 @@ spec:
         spec:
           properties:
             backupName:
-              description: Name of SQLBackup resource. If specified, it means creating
-                the database instances loaded with backup data.
+              description: Name of RelationalBackup resource. If specified, it means
+                creating the database instances loaded with backup data.
               type: string
             disk:
               description: Details of underlying disk that stores SQL dumps.
               properties:
-                sizeTB:
-                  description: Disk size in TB. Default to 0.1 if not specified.
-                  format: float
-                  type: number
+                sizeGB:
+                  description: Disk size in GB. Default to 10 if not specified.
+                  format: int32
+                  type: integer
                 type:
                   description: Disk type. Currently support only "ZonalPersistentDisk"
                     type for demo purpose. Default to "ZonalPersistentDisk" if not
@@ -50,7 +50,7 @@ spec:
               format: int32
               type: integer
             type:
-              description: Database type. Currently support "PostgreSQL" and "MySQL"
+              description: Sql database type. Currently support "PostgreSQL" and "MySQL"
                 types.
               type: string
             version:
@@ -69,6 +69,10 @@ spec:
               items:
                 type: string
               type: array
+            succeeded:
+              description: Status of deployment of database instances. True if the
+                deployment has completed successfully.
+              type: boolean
           type: object
   version: v1alpha1
 status:
