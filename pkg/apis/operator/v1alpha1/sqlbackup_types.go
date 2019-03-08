@@ -20,18 +20,32 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type BackupPhase string
+
+const (
+	// Backup is in progress.
+	BackupInProgress BackupPhase = "BackupInProgress"
+
+	// Backup has succeeded.
+	BackupSucceeded BackupPhase = "BackupSucceeded"
+)
+
 // SqlBackupSpec defines the desired state of SqlBackup
 type SqlBackupSpec struct {
 	// Name of SqlDB resource that has its database instances performed backup with.
 	SqlDBName string `json:"sqlDBName"`
+
+	// Backup file name.
+	// Default to "db.dump" if not specified.
+	// +optional
+	FileName *string `json:"fileName,omitempty"`
 }
 
 // SqlBackupStatus defines the observed state of SqlBackup
 type SqlBackupStatus struct {
 	// Backup status.
-	// True if backup has succeeded.
 	// +optional
-	Succeeded bool `json:"succeeded,omitempty"`
+	Phase BackupPhase `json:"phase,omitempty"`
 }
 
 // +genclient
