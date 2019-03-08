@@ -27,16 +27,17 @@ spec:
         metadata:
           type: object
         spec:
+          description: Specification of the desired behavior of SqlDB.
           properties:
             backupName:
-              description: Name of RelationalBackup resource. If specified, it means
-                creating the database instances loaded with backup data.
+              description: Name of SqlBackup resource. If specified, it means creating
+                the database instances loaded with backup data.
               type: string
             disk:
               description: Details of underlying disk that stores SQL dumps.
               properties:
                 sizeGB:
-                  description: Disk size in GB. Default to 10 if not specified.
+                  description: Disk size in GB. Default to 1 if not specified.
                   format: int32
                   type: integer
                 type:
@@ -62,6 +63,9 @@ spec:
           - disk
           type: object
         status:
+          description: 'Most recently observed status of SqlDB. This data may be out
+            of date by some window of time. Populated by the system. Read-only. More
+            info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status'
           properties:
             endpoints:
               description: Endpoints of database instances. The number of endpoints

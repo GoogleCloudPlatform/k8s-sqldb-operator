@@ -5,5 +5,9 @@ metadata:
     controller-tools.k8s.io: "1.0"
   name: sqldb-sample
 spec:
-  # Add fields here
-  foo: bar
+  type: PostgreSQL
+  version: latest
+  replicas: 1
+  disk:
+    type: ZonalPersistentDisk
+    sizeGB: 1

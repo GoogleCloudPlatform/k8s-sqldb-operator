@@ -30,6 +30,7 @@ type SqlBackupSpec struct {
 type SqlBackupStatus struct {
 	// Backup status.
 	// True if backup has succeeded.
+	// +optional
 	Succeeded bool `json:"succeeded,omitempty"`
 }
 
@@ -42,7 +43,16 @@ type SqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SqlBackupSpec   `json:"spec,omitempty"`
+	// Specification of the desired behavior of SqlBackup.
+	// +optional
+	Spec SqlBackupSpec `json:"spec,omitempty"`
+
+	// Most recently observed status of SqlBackup.
+	// This data may be out of date by some window of time.
+	// Populated by the system.
+	// Read-only.
+	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// +optional
 	Status SqlBackupStatus `json:"status,omitempty"`
 }
 
