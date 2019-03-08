@@ -45,14 +45,17 @@ type SqlDBSpec struct {
 
 	// Version of the database (e.g., "1.5.1", "latest").
 	// Default to "latest" if not specified.
+	// +optional
 	Version *string `json:"version,omitempty"`
 
 	// Number of database instances.
 	// Default to 1 if not specified.
+	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Name of RelationalBackup resource.
+	// Name of SqlBackup resource.
 	// If specified, it means creating the database instances loaded with backup data.
+	// +optional
 	BackupName *string `json:"backupName,omitempty"`
 
 	// Details of underlying disk that stores SQL dumps.
@@ -63,10 +66,12 @@ type DBDisk struct {
 	// Disk type.
 	// Currently support only "ZonalPersistentDisk" type for demo purpose.
 	// Default to "ZonalPersistentDisk" if not specified.
+	// +optional
 	Type *DiskType `json:"type,omitempty"`
 
 	// Disk size in GB.
-	// Default to 10 if not specified.
+	// Default to 1 if not specified.
+	// +optional
 	SizeGB *int32 `json:"sizeGB,omitempty"`
 }
 
@@ -74,10 +79,12 @@ type DBDisk struct {
 type SqlDBStatus struct {
 	// Status of deployment of database instances.
 	// True if the deployment has completed successfully.
+	// +optional
 	Ready bool `json:"succeeded,omitempty"`
 
 	// Endpoints of database instances.
 	// The number of endpoints should be equal to the number of database instances.
+	// +optional
 	Endpoints []string `json:"endpoints,omitempty"`
 }
 
@@ -90,7 +97,16 @@ type SqlDB struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SqlDBSpec   `json:"spec,omitempty"`
+	// Specification of the desired behavior of SqlDB.
+	// +optional
+	Spec SqlDBSpec `json:"spec,omitempty"`
+
+	// Most recently observed status of SqlDB.
+	// This data may be out of date by some window of time.
+	// Populated by the system.
+	// Read-only.
+	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// +optional
 	Status SqlDBStatus `json:"status,omitempty"`
 }
 

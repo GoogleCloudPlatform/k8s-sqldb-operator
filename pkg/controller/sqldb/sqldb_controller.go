@@ -18,15 +18,18 @@ package sqldb
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"reflect"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	operatorv1alpha1 "k8s.io/sqldb/pkg/apis/operator/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,14 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new SqlDB Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-// USER ACTION REQUIRED: update cmd/manager/main.go to call this operator.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
@@ -68,9 +65,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by SqlDB - change this for objects you create
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	// Watch a StatefulSet created by SqlDB
+	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &operatorv1alpha1.SqlDB{},
 	})
@@ -89,15 +85,95 @@ type ReconcileSqlDB struct {
 	scheme *runtime.Scheme
 }
 
+func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
+	if instance.Spec.Version == nil {
+		defaultVersion := "latest"
+		instance.Spec.Version = &defaultVersion
+	}
+
+	if instance.Spec.Replicas == nil {
+		defaultReplicaNumber := int32(1)
+		instance.Spec.Replicas = &defaultReplicaNumber
+	}
+
+	if instance.Spec.Disk.Type == nil {
+		defaultDiskType := operatorv1alpha1.ZonalPersistentDisk
+		instance.Spec.Disk.Type = &defaultDiskType
+	}
+
+	if instance.Spec.Disk.SizeGB == nil {
+		defaultDiskSizeGB := int32(1)
+		instance.Spec.Disk.SizeGB = &defaultDiskSizeGB
+	}
+
+	return r.Update(context.TODO(), instance)
+}
+
+func validateFields(instance *operatorv1alpha1.SqlDB) error {
+	if instance.Spec.Type != operatorv1alpha1.PostgreSQL && instance.Spec.Type != operatorv1alpha1.MySQL {
+		return fmt.Errorf(".spec.type must be either %q or %q", operatorv1alpha1.PostgreSQL, operatorv1alpha1.MySQL)
+	}
+	return nil
+}
+
+func getImageName(dbType string) string {
+	if dbType == string(operatorv1alpha1.PostgreSQL) {
+		return "postgres" // PostgreSQL
+	}
+	return "mysql" // MySQL
+}
+
+// getSVCTemplate returns a Service template.
+func getSVCTemplate(instanceName string) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sqldb-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"statefulset": instanceName + "-statefulset",
+			},
+			ClusterIP: "None",
+			Ports: []corev1.ServicePort{
+				{
+					Protocol:   "TCP",
+					Port:       1,
+					TargetPort: intstr.FromInt(1),
+				},
+			},
+		},
+	}
+}
+
+// getPVCTemplate returns a PersistentVolumeClaim template with required disk size in GB.
+func getPVCTemplate(diskSizeGB int32) *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "sqldb-pvc",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSizeGB)),
+				},
+			},
+		},
+	}
+}
+
 // Reconcile reads that state of the cluster for a SqlDB object and makes changes based on the state read
 // and what is in the SqlDB.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.k8s.io,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the SqlDB instance
+	// Fetch the SqlDB instance.
 	instance := &operatorv1alpha1.SqlDB{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -110,41 +186,20 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this to be the object type created by your controller
-	// Define the desired Deployment object
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-deployment",
-			Namespace: instance.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-deployment"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"deployment": instance.Name + "-deployment"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx",
-						},
-					},
-				},
-			},
-		},
+	if err = r.defaultFields(instance); err != nil {
+		return reconcile.Result{}, err
 	}
-	if err := controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
+	if err = validateFields(instance); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Check if the Deployment already exists
-	found := &appsv1.Deployment{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, found)
+	// Create a load-balancer Service if the Service is not yet created.
+	svc := getSVCTemplate(instance.Name)
+	foundSvc := &corev1.Service{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, foundSvc)
 	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Create(context.TODO(), deploy)
+		log.Printf("Creating Service %s/%s\n", svc.Namespace, svc.Name)
+		err = r.Create(context.TODO(), svc)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -152,15 +207,52 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	// TODO(user): Change this for the object type created by your controller
-	// Update the found object and write the result back if there are any changes
-	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
-		found.Spec = deploy.Spec
-		log.Printf("Updating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Update(context.TODO(), found)
+	// Define the desired StatefulSet object.
+	sts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Name + "-statefulset",
+			Namespace: instance.Namespace,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: instance.Spec.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"statefulset": instance.Name + "-statefulset",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"statefulset": instance.Name + "-statefulset"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  strings.ToLower(string(instance.Spec.Type)),
+							Image: fmt.Sprintf("%s:%s", getImageName(string(instance.Spec.Type)), *instance.Spec.Version),
+						},
+					},
+				},
+			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				*getPVCTemplate(*instance.Spec.Disk.SizeGB),
+			},
+			ServiceName: "sqldb-svc", // Hard-coded - hidden from user.
+		},
+	}
+	if err := controllerutil.SetControllerReference(instance, sts, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Create a StatefulSet if the StatefulSet is not yet created.
+	foundSts := &appsv1.StatefulSet{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: sts.Name, Namespace: sts.Namespace}, foundSts)
+	if err != nil && errors.IsNotFound(err) {
+		log.Printf("Creating StatefulSet %s/%s\n", sts.Namespace, sts.Name)
+		err = r.Create(context.TODO(), sts)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+	} else if err != nil {
+		return reconcile.Result{}, err
 	}
+
 	return reconcile.Result{}, nil
 }
