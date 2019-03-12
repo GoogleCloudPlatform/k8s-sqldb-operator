@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	operatorv1alpha1 "k8s.io/sqldb/pkg/apis/operator/v1alpha1"
+	"k8s.io/sqldb/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -85,42 +86,55 @@ type ReconcileSqlDB struct {
 	scheme *runtime.Scheme
 }
 
+// TODO (sunilarora): Change defaulting codes to a webhook.
 func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
+	var defaulted bool
+
 	if instance.Spec.Version == nil {
 		defaultVersion := "latest"
 		instance.Spec.Version = &defaultVersion
+		defaulted = true
 	}
 
 	if instance.Spec.Replicas == nil {
 		defaultReplicaNumber := int32(1)
 		instance.Spec.Replicas = &defaultReplicaNumber
+		defaulted = true
 	}
 
 	if instance.Spec.Disk.Type == nil {
 		defaultDiskType := operatorv1alpha1.ZonalPersistentDisk
 		instance.Spec.Disk.Type = &defaultDiskType
+		defaulted = true
 	}
 
 	if instance.Spec.Disk.SizeGB == nil {
 		defaultDiskSizeGB := int32(1)
 		instance.Spec.Disk.SizeGB = &defaultDiskSizeGB
+		defaulted = true
 	}
 
-	return r.Update(context.TODO(), instance)
+	if defaulted {
+		return r.Update(context.TODO(), instance)
+	}
+	return nil
 }
 
+// TODO (sunilarora): Change validation codes to a webhook.
 func validateFields(instance *operatorv1alpha1.SqlDB) error {
-	if instance.Spec.Type != operatorv1alpha1.PostgreSQL && instance.Spec.Type != operatorv1alpha1.MySQL {
-		return fmt.Errorf(".spec.type must be either %q or %q", operatorv1alpha1.PostgreSQL, operatorv1alpha1.MySQL)
+	if instance.Spec.Type != operatorv1alpha1.PostgreSQL {
+		return fmt.Errorf(".spec.type must be either %q", operatorv1alpha1.PostgreSQL)
 	}
 	return nil
 }
 
 func getImageName(dbType string) string {
+	// For PostgreSQL database.
 	if dbType == string(operatorv1alpha1.PostgreSQL) {
-		return "postgres" // PostgreSQL
+		return "postgres"
 	}
-	return "mysql" // MySQL
+	// For other databases, return empty string for now.
+	return ""
 }
 
 // getSVCTemplate returns a Service template.
@@ -169,7 +183,6 @@ func getPVCTemplate(diskSizeGB int32) *corev1.PersistentVolumeClaim {
 
 // Reconcile reads that state of the cluster for a SqlDB object and makes changes based on the state read
 // and what is in the SqlDB.Spec
-// Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.k8s.io,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -194,6 +207,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create a load-balancer Service if the Service is not yet created.
+	// TODO: Figure out what to do with this Service.
 	svc := getSVCTemplate(instance.Name)
 	foundSvc := &corev1.Service{}
 	err = r.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, foundSvc)
@@ -208,6 +222,8 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Define the desired StatefulSet object.
+	// TODO (sunilarora): Secret credentials support.
+	// TODO (sunilarora): Implement db-client to check for health/status of the DB.
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name + "-statefulset",
@@ -225,8 +241,14 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  strings.ToLower(string(instance.Spec.Type)),
+							Name:  strings.ToLower(fmt.Sprintf("%s-db", instance.Spec.Type)),
 							Image: fmt.Sprintf("%s:%s", getImageName(string(instance.Spec.Type)), *instance.Spec.Version),
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "sqldb-pvc",
+									MountPath: "/sqldb",
+								},
+							},
 						},
 					},
 				},
@@ -237,6 +259,8 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 			ServiceName: "sqldb-svc", // Hard-coded - hidden from user.
 		},
 	}
+
+	// Set SqlDB resource to own the StatefulSet resource.
 	if err := controllerutil.SetControllerReference(instance, sts, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -250,8 +274,50 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		instance.Status.Phase = operatorv1alpha1.ServerDeploymentInProgress
+		return reconcile.Result{}, r.Update(context.TODO(), instance)
 	} else if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// The StatefulSet is not ready yet, so reconcile immediately.
+	if foundSts.Status.ReadyReplicas != *foundSts.Spec.Replicas {
+		return reconcile.Result{}, nil
+	}
+
+	// Update status of SqlDB accordingly when the StatefulSet is ready.
+	instance.Status.Phase = operatorv1alpha1.ServerReady
+	if err = r.Update(context.TODO(), instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// After starting the PostgreSQL server, handle from-restore deployment
+	// if it is not yet performed (.status.phase field != ServerRestored)
+	// and .spec.backupName field is specified.
+	if instance.Status.Phase != operatorv1alpha1.ServerRestored && instance.Spec.BackupName != nil {
+		sqlBackup := &operatorv1alpha1.SqlBackup{}
+		sqlBackupName := *instance.Spec.BackupName
+		err = r.Get(context.TODO(), types.NamespacedName{Name: sqlBackupName, Namespace: instance.Namespace}, sqlBackup)
+		if err != nil && errors.IsNotFound(err) {
+			return reconcile.Result{},
+				fmt.Errorf("SqlBackup resource named %q does not exist although it is specified by .spec.backupName field", sqlBackupName)
+		}
+		backupFileName := *sqlBackup.Spec.FileName
+		if backupFileName == "" {
+			backupFileName = "db.dump"
+		}
+		var cmd string
+		if instance.Spec.Type == operatorv1alpha1.PostgreSQL {
+			cmd = fmt.Sprintf("pg_restore -U postgres -d postgres sqldb/%s", backupFileName)
+			if err = utils.PerformOperation("postgresql-db", cmd); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		// Update status of SqlDB accordingly.
+		instance.Status.Phase = operatorv1alpha1.ServerRestored
+		if err = r.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil

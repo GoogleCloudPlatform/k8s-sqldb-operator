@@ -30,7 +30,7 @@ spec:
           description: Specification of the desired behavior of SqlDB.
           properties:
             backupName:
-              description: Name of SqlBackup resource. If specified, it means creating
+              description: Name of SqlBackup resource. If specified, it means restoring
                 the database instances loaded with backup data.
               type: string
             disk:
@@ -51,8 +51,8 @@ spec:
               format: int32
               type: integer
             type:
-              description: Sql database type. Currently support "PostgreSQL" and "MySQL"
-                types.
+              description: Sql database type. Currently only support "PostgreSQL"
+                type.
               type: string
             version:
               description: Version of the database (e.g., "1.5.1", "latest"). Default
@@ -73,10 +73,9 @@ spec:
               items:
                 type: string
               type: array
-            succeeded:
-              description: Status of deployment of database instances. True if the
-                deployment has completed successfully.
-              type: boolean
+            phase:
+              description: Status of deployment of database instances.
+              type: string
           type: object
   version: v1alpha1
 status:

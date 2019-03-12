@@ -6,3 +6,4 @@ metadata:
   name: sqlbackup-sample
 spec:
   sqlDBName: sqldb-sample
+  fileName: postgresql.dump

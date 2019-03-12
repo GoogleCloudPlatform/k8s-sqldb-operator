@@ -25,9 +25,6 @@ type DBType string
 const (
 	// PostgreSQL database.
 	PostgreSQL DBType = "PostgreSQL"
-
-	// MySQL database.
-	MySQL DBType = "MySQL"
 )
 
 type DiskType string
@@ -37,10 +34,25 @@ const (
 	ZonalPersistentDisk DiskType = "ZonalPersistentDisk"
 )
 
+type DBPhase string
+
+const (
+	// Deployment of database instances is in progress.
+	ServerDeploymentInProgress DBPhase = "ServerDeploymentInProgress"
+
+	// Deployment of database instances has completed.
+	// The database instances are ready to accept requests.
+	ServerReady DBPhase = "ServerReady"
+
+	// Database instances have been restored from a backup file.
+	// The database instances are ready to accept requests.
+	ServerRestored DBPhase = "ServerRestored"
+)
+
 // SqlDBSpec defines the desired state of SqlDB
 type SqlDBSpec struct {
 	// Sql database type.
-	// Currently support "PostgreSQL" and "MySQL" types.
+	// Currently only support "PostgreSQL" type.
 	Type DBType `json:"type"`
 
 	// Version of the database (e.g., "1.5.1", "latest").
@@ -53,13 +65,13 @@ type SqlDBSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Name of SqlBackup resource.
-	// If specified, it means creating the database instances loaded with backup data.
-	// +optional
-	BackupName *string `json:"backupName,omitempty"`
-
 	// Details of underlying disk that stores SQL dumps.
 	Disk DBDisk `json:"disk"`
+
+	// Name of SqlBackup resource.
+	// If specified, it means restoring the database instances loaded with backup data.
+	// +optional
+	BackupName *string `json:"backupName,omitempty"`
 }
 
 type DBDisk struct {
@@ -78,9 +90,8 @@ type DBDisk struct {
 // SqlDBStatus defines the observed state of SqlDB
 type SqlDBStatus struct {
 	// Status of deployment of database instances.
-	// True if the deployment has completed successfully.
 	// +optional
-	Ready bool `json:"succeeded,omitempty"`
+	Phase DBPhase `json:"phase,omitempty"`
 
 	// Endpoints of database instances.
 	// The number of endpoints should be equal to the number of database instances.

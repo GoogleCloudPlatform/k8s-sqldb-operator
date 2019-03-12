@@ -18,7 +18,6 @@ required = [
 [prune]
   go-tests = true
 
-
 # STANZAS BELOW ARE GENERATED AND MAY BE WRITTEN - DO NOT MODIFY BELOW THIS LINE.
 
 [[constraint]]

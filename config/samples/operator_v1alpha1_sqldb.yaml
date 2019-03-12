@@ -11,3 +11,4 @@ spec:
   disk:
     type: ZonalPersistentDisk
     sizeGB: 1
+  backupName: sqlbackup-sample

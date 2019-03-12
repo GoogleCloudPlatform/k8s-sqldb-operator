@@ -10,6 +10,25 @@
   version = "v0.36.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:6da51e5ec493ad2b44cb04129e2d0a068c8fb9bd6cb5739d199573558696bb94"
+  name = "github.com/Azure/go-ansiterm"
+  packages = [
+    ".",
+    "winterm",
+  ]
+  pruneopts = "T"
+  revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
+
+[[projects]]
+  digest = "1:ef2f0eff765cd6c60594654adc602ac5ba460462ac395c6f3c144e5bea24babe"
+  name = "github.com/Microsoft/go-winio"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "1a8911d1ed007260465c3bfbbc785ac6915a0bb8"
+  version = "v0.4.12"
+
+[[projects]]
   digest = "1:464aef731a5f82ded547c62e249a2e9ec59fbbc9ddab53cda7b9857852630a61"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -26,12 +45,65 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  branch = "master"
+  digest = "1:1271f7f8cc5f5b2eb0c683f92c7adf8fca1813b9da5218d6df1c9cf4bdc3f8d5"
+  name = "github.com/containerd/continuity"
+  packages = ["pathdriver"]
+  pruneopts = "T"
+  revision = "004b46473808b3e7a4a3049c20e4376c91eb966d"
+
+[[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   pruneopts = "T"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:57a0fbacc7e5008821a0c7cff95741a9eb292d3c828f92c2d61fa64c1e03b851"
+  name = "github.com/docker/docker"
+  packages = [
+    "api/types/blkiodev",
+    "api/types/container",
+    "api/types/filters",
+    "api/types/mount",
+    "api/types/network",
+    "api/types/registry",
+    "api/types/strslice",
+    "api/types/swarm",
+    "api/types/swarm/runtime",
+    "api/types/versions",
+    "errdefs",
+    "pkg/fileutils",
+    "pkg/homedir",
+    "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/longpath",
+    "pkg/mount",
+    "pkg/pools",
+    "pkg/stdcopy",
+    "pkg/system",
+  ]
+  pruneopts = "T"
+  revision = "54dddadc7d5d89fe0be88f76979f6f6ab0dede83"
+
+[[projects]]
+  digest = "1:b64eea95d41af3792092af9c951efcd2d8d8bfd2335c851f7afaf54d6be12c66"
+  name = "github.com/docker/go-connections"
+  packages = ["nat"]
+  pruneopts = "T"
+  revision = "7395e3f8aa162843a74ed6d48e79627d9792ac55"
+  version = "v0.4.0"
+
+[[projects]]
+  digest = "1:6f82cacd0af5921e99bf3f46748705239b36489464f4529a1589bc895764fb18"
+  name = "github.com/docker/go-units"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
+  version = "v0.3.3"
 
 [[projects]]
   digest = "1:7f98547edaaa86eeaba758dd915cb2ee9264568257febdaad73c6b697e19b561"
@@ -43,6 +115,19 @@
   pruneopts = "T"
   revision = "85d198d05a92d31823b852b4a5928114912e8949"
   version = "v2.9.0"
+
+[[projects]]
+  digest = "1:4b71c5457d8965b8d5b5fe238d8e21bb1066884c6f828db074a688f97885a33e"
+  name = "github.com/fsouza/go-dockerclient"
+  packages = [
+    ".",
+    "internal/archive",
+    "internal/jsonmessage",
+    "internal/term",
+  ]
+  pruneopts = "T"
+  revision = "a8d735713a2b2b9101595fdf53fdb03cb51681b6"
+  version = "v1.3.6"
 
 [[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
@@ -182,6 +267,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:33f920ba428942560c22c0e145127dc09a52c52d64eac284daea6b0926fab0d1"
+  name = "github.com/ijc/Gotty"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "a8b993ba6abdb0e0c12b0125c603323a71c7790c"
+
+[[projects]]
   digest = "1:f53ef9250fa86a357d164aa5188ff02762a6b0ee5129671ad231ed6ba986b4c5"
   name = "github.com/imdario/mergo"
   packages = ["."]
@@ -212,6 +305,14 @@
   pruneopts = "T"
   revision = "1624edc4454b8682399def8740d46db5e4362ba4"
   version = "v1.1.5"
+
+[[projects]]
+  digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:3804a3a02964db8e6db3e5e7960ac1c1a9b12835642dd4f4ac4e56c749ec73eb"
@@ -294,6 +395,33 @@
   pruneopts = "T"
   revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
   version = "v1.4.3"
+
+[[projects]]
+  digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
+  name = "github.com/opencontainers/go-digest"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
+  version = "v1.0.0-rc1"
+
+[[projects]]
+  digest = "1:eb47da2fdabb69f64ce3a42a1790ec0ed9da6718c8378f3fdc41cbe6af184519"
+  name = "github.com/opencontainers/image-spec"
+  packages = [
+    "specs-go",
+    "specs-go/v1",
+  ]
+  pruneopts = "T"
+  revision = "d60099175f88c47cd379c4738d158884749ed235"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:52254f0d6ce1358972c08cb1ecd91a449af3a7f927f829abec962613fb167403"
+  name = "github.com/opencontainers/runc"
+  packages = ["libcontainer/user"]
+  pruneopts = "T"
+  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
+  version = "v0.1.1"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -384,6 +512,14 @@
   pruneopts = "T"
   revision = "1cf9852c553c5b7da2d5a4a091129a7822fed0c9"
   version = "v1.2.2"
+
+[[projects]]
+  digest = "1:e878dfe6e3fb9f3dcd1df02a2fb20ec0cfa2cefb5dc3f09746099a14b91e9774"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:2c31831b97353515f0bb77a3e7f2df69e50c4173116aad4250e22b1c664a1484"
@@ -928,6 +1064,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/emicklei/go-restful",
+    "github.com/fsouza/go-dockerclient",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "golang.org/x/net/context",
@@ -935,10 +1072,12 @@
     "k8s.io/api/core/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
