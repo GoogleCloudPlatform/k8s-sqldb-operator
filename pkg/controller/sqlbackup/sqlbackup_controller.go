@@ -69,7 +69,7 @@ type ReconcileSqlBackup struct {
 	scheme *runtime.Scheme
 }
 
-// TODO: Change defaulting codes to a webhook.
+// TODO (sunilarora): Change defaulting codes to a webhook.
 func (r *ReconcileSqlBackup) defaultFields(instance *operatorv1alpha1.SqlBackup) error {
 	if instance.Spec.FileName == nil {
 		defaultFileName := "db.dump"
@@ -111,10 +111,20 @@ func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Res
 	if db.Spec.Type == operatorv1alpha1.PostgreSQL {
 		cmd := fmt.Sprintf("pg_dump -h localhost -U postgres -Fc > sqldb/%s", *instance.Spec.FileName)
 		if err = utils.PerformOperation("postgresql-db", cmd); err != nil {
+			// Update status of SqlBackup after the backup has failed.
+			instance.Status.Phase = operatorv1alpha1.BackupFailed
+			if updateErr := r.Update(context.TODO(), instance); updateErr != nil {
+				return reconcile.Result{}, fmt.Errorf("after failing to perform backup, failed to update SqlBackup: %+v", updateErr)
+			}
 			return reconcile.Result{}, err
 		}
 	}
-	// Implementation for MySQL database is left as exercise.
+
+	// Update status of SqlBackup after performing the backup successfully.
+	instance.Status.Phase = operatorv1alpha1.BackupSucceeded
+	if updateErr := r.Update(context.TODO(), instance); updateErr != nil {
+		return reconcile.Result{}, fmt.Errorf("after successfully performing backup, failed to update SqlBackup: %+v", updateErr)
+	}
 
 	return reconcile.Result{}, nil
 }

@@ -18,8 +18,10 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +42,7 @@ func PerformOperation(containerName, cmd string) error {
 	if err != nil {
 		return err
 	}
+
 	req := clientset.Core().RESTClient().Post().
 		Resource("pods").
 		Name("sqldb-sample-statefulset-0").
@@ -49,6 +52,7 @@ func PerformOperation(containerName, cmd string) error {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		return err
 	}
+
 	parameterCodec := runtime.NewParameterCodec(scheme)
 	req.VersionedParams(&corev1.PodExecOptions{
 		Command:   []string{"/bin/bash", "-c", cmd},
@@ -58,7 +62,6 @@ func PerformOperation(containerName, cmd string) error {
 		Stderr:    true,
 		TTY:       false,
 	}, parameterCodec)
-
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return err
@@ -72,7 +75,10 @@ func PerformOperation(containerName, cmd string) error {
 		Tty:    false,
 	})
 	if err != nil {
-		return err
+		// Needed as SPDY executor streams until a client closes the connection or the server disconnects.
+		if strings.Index(stderr.String(), "already exists") == -1 {
+			return fmt.Errorf("%+v: %s", err, stderr.String())
+		}
 	}
 	return nil
 }

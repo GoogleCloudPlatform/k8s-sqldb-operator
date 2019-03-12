@@ -23,11 +23,11 @@ import (
 type BackupPhase string
 
 const (
-	// Backup is in progress.
-	BackupInProgress BackupPhase = "BackupInProgress"
-
 	// Backup has succeeded.
 	BackupSucceeded BackupPhase = "BackupSucceeded"
+
+	// Backup has failed.
+	BackupFailed BackupPhase = "BackupFailed"
 )
 
 // SqlBackupSpec defines the desired state of SqlBackup

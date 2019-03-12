@@ -25,9 +25,6 @@ type DBType string
 const (
 	// PostgreSQL database.
 	PostgreSQL DBType = "PostgreSQL"
-
-	// MySQL database.
-	MySQL DBType = "MySQL"
 )
 
 type DiskType string
@@ -41,17 +38,21 @@ type DBPhase string
 
 const (
 	// Deployment of database instances is in progress.
-	DeploymentInProgress DBPhase = "DeploymentInProgress"
+	ServerDeploymentInProgress DBPhase = "ServerDeploymentInProgress"
 
 	// Deployment of database instances has completed.
 	// The database instances are ready to accept requests.
-	Ready DBPhase = "Ready"
+	ServerReady DBPhase = "ServerReady"
+
+	// Database instances have been restored from a backup file.
+	// The database instances are ready to accept requests.
+	ServerRestored DBPhase = "ServerRestored"
 )
 
 // SqlDBSpec defines the desired state of SqlDB
 type SqlDBSpec struct {
 	// Sql database type.
-	// Currently support "PostgreSQL" and "MySQL" types.
+	// Currently only support "PostgreSQL" type.
 	Type DBType `json:"type"`
 
 	// Version of the database (e.g., "1.5.1", "latest").

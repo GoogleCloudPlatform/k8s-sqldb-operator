@@ -51,8 +51,8 @@ spec:
               format: int32
               type: integer
             type:
-              description: Sql database type. Currently support "PostgreSQL" and "MySQL"
-                types.
+              description: Sql database type. Currently only support "PostgreSQL"
+                type.
               type: string
             version:
               description: Version of the database (e.g., "1.5.1", "latest"). Default
