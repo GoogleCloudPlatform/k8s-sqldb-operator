@@ -11,4 +11,5 @@ spec:
   disk:
     type: ZonalPersistentDisk
     sizeGB: 1
-  backupName: sqlbackup-sample
+  # uncomment following field to perform restore
+  # backupName: sqlbackup-sample
