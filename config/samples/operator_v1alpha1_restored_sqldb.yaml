@@ -3,7 +3,7 @@ kind: SqlDB
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
-  name: sqldb-sample
+  name: restored-sqldb-sample
 spec:
   type: PostgreSQL
   version: latest
@@ -11,3 +11,4 @@ spec:
   disk:
     type: ZonalPersistentDisk
     sizeGB: 1
+  backupName: sqlbackup-sample

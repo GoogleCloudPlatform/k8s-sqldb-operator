@@ -37,10 +37,9 @@ You should see following output:
 2. `kubectl describe sqlbackup/sqlbackup-sample` (wait until `.status.phase` field becomes `BackupSucceeded`)
 
 ##### Restore
-1. `kubectl delete -f config/samples/operator_v1alpha1_sqldb.yaml` (tear down existing PostgreSQL servers)
-2. `kubectl apply -f config/samples/operator_v1alpha1_sqldb.yaml` (specify `.spec.backupName` field to "sqlbackup-sample" to trigger restore)
-3. `kubectl describe sqldb/sqldb-sample` (wait until `.status.phase` field becomes `ServerRestored`)
-4. `kubectl exec -it sqldb-sample-statefulset-0 /bin/bash`
-5. `psql -c 'SELECT * FROM account;' -U postgres`
+1. `kubectl apply -f config/samples/operator_v1alpha1_restored_sqldb.yaml` (note: `.spec.backupName` field is specified to trigger restore)
+2. `kubectl describe sqldb/sqldb-sample` (wait until `.status.phase` field becomes `ServerRestored`)
+3. `kubectl exec -it sqldb-sample-statefulset-0 /bin/bash`
+4. `psql -c 'SELECT * FROM account;' -U postgres`
 
 Verify that the `1234` user ID data is restored.
