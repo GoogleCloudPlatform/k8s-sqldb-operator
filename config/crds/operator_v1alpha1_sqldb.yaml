@@ -6,6 +6,22 @@ metadata:
     controller-tools.k8s.io: "1.0"
   name: sqldbs.operator.k8s.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.replicas
+    description: The number of replicas launched
+    name: Replicas
+    type: integer
+  - JSONPath: .status.phase
+    description: status of the DB
+    name: Status
+    type: string
+  - JSONPath: .status.endpoint
+    description: Endpoint to access the DB
+    name: Endpoint
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
   group: operator.k8s.io
   names:
     kind: SqlDB
@@ -67,12 +83,9 @@ spec:
             of date by some window of time. Populated by the system. Read-only. More
             info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status'
           properties:
-            endpoints:
-              description: Endpoints of database instances. The number of endpoints
-                should be equal to the number of database instances.
-              items:
-                type: string
-              type: array
+            endpoint:
+              description: Endpoint exposes the SQLDB instance.
+              type: string
             phase:
               description: Status of deployment of database instances.
               type: string
