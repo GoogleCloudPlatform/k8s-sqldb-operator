@@ -294,6 +294,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Update status of SqlDB accordingly when the StatefulSet is ready.
 	instance.Status.Phase = operatorv1alpha1.ServerReady
+	instance.Status.Endpoint = "sqldb-" + instance.Name + "-svc." + instance.Namespace
 	if err = r.Update(context.TODO(), instance); err != nil {
 		return reconcile.Result{}, err
 	}

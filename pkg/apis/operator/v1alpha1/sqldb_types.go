@@ -93,10 +93,8 @@ type SqlDBStatus struct {
 	// +optional
 	Phase DBPhase `json:"phase,omitempty"`
 
-	// Endpoints of database instances.
-	// The number of endpoints should be equal to the number of database instances.
-	// +optional
-	Endpoints []string `json:"endpoints,omitempty"`
+	// Endpoint exposes the SQLDB instance.
+	Endpoint string `json:"endpoint,omitempty"`
 }
 
 // +genclient
@@ -104,6 +102,10 @@ type SqlDBStatus struct {
 
 // SqlDB is the Schema for the sqldbs API
 // +k8s:openapi-gen=true
+// +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas",description="The number of replicas launched"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase",description="status of the DB"
+// +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".status.endpoint",description="Endpoint to access the DB"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type SqlDB struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
