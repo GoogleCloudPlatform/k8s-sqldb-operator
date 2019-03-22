@@ -145,19 +145,18 @@ func getSVCTemplate(instanceName string) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sqldb-svc",
+			Name:      "sqldb-" + instanceName + "-svc",
 			Namespace: "default",
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"statefulset": instanceName + "-statefulset",
+				"sqldb": instanceName,
 			},
-			ClusterIP: "None",
 			Ports: []corev1.ServicePort{
 				{
 					Protocol:   "TCP",
-					Port:       1,
-					TargetPort: intstr.FromInt(1),
+					Port:       5432,
+					TargetPort: intstr.FromInt(5432),
 				},
 			},
 		},
@@ -209,6 +208,10 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Create a load-balancer Service if the Service is not yet created.
 	// TODO: Figure out what to do with this Service.
 	svc := getSVCTemplate(instance.Name)
+	// Set SqlDB resource to own the service resource.
+	if err := controllerutil.SetControllerReference(instance, svc, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
 	foundSvc := &corev1.Service{}
 	err = r.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, foundSvc)
 	if err != nil && errors.IsNotFound(err) {
@@ -233,11 +236,15 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 			Replicas: instance.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"statefulset": instance.Name + "-statefulset",
+					"sqldb": instance.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"statefulset": instance.Name + "-statefulset"}},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"sqldb": instance.Name,
+					},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -256,7 +263,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				*getPVCTemplate(*instance.Spec.Disk.SizeGB),
 			},
-			ServiceName: "sqldb-svc", // Hard-coded - hidden from user.
+			ServiceName: "sqldb-" + instance.Name + "-svc",
 		},
 	}
 
