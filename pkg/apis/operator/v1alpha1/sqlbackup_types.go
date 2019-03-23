@@ -53,6 +53,8 @@ type SqlBackupStatus struct {
 
 // SqlBackup is the Schema for the sqlbackups API
 // +k8s:openapi-gen=true
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase",description="status of the backup"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type SqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

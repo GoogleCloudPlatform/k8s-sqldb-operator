@@ -6,6 +6,14 @@ metadata:
     controller-tools.k8s.io: "1.0"
   name: sqlbackups.operator.k8s.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.phase
+    description: status of the backup
+    name: Status
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
   group: operator.k8s.io
   names:
     kind: SqlBackup
