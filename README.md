@@ -6,24 +6,47 @@ SqlDB operator is a basic Kubernetes stateful operator that automates creation, 
 1. `SqlDB`: for **server deployment** and **restore** workflows
 2. `SqlBackup`: for **backup** workflow
 
+## Recommended Versions
+`kubernetes`: `1.11`
+`kubectl`: `1.11.0`
+
 ## Example Workflows: PostgreSQL
+
+Before starting any of the workflows below, run following commands:
+1. Run an `alpine` pod and get a shell to its container:
+```
+kubectl run --generator=run-pod/v1 --image=alpine:latest -it alpine -- /bin/sh
+```
+2. Install the container with `psql` terminal:
+```
+apk add --update postgresql-client
+```
+
+Note: The operator accesses the PostgreSQL server with username `john` and password `abc` via a Kubernetes Service resource named `sqldb-db1-svc`.
 
 ##### Server Deployment
 
-1. `kubectl apply -f config/samples/operator_v1alpha1_sqldb.yaml` (don't specify `.spec.backupName` field)
-2. `kubectl describe sqldb/sqldb-sample` (wait until `.status.phase` field becomes `ServerReady`)
-3. `kubectl exec -it sqldb-sample-statefulset-0 /bin/bash`
-
-After executing into pod `sqldb-sample-statefulset-0` (name is fixed), run following `psql` commands:
+1. Create a `SqlDB` resource named `db1` to bring up a PostgreSQL cluster:
 ```
-psql -c 'create role root with superuser;' -U postgres
-psql -c 'alter user postgres login;' -U postgres
-psql -c 'CREATE TABLE account(user_id serial PRIMARY KEY);' -U postgres
-psql -c 'INSERT INTO account(user_id) VALUES (1234)' -U postgres
-psql -c 'SELECT * FROM account;' -U postgres
+kubectl apply -f config/samples/db1.yaml
 ```
-
-You should see following output:
+2. Wait for the server to become ready:
+```
+kubectl get sqldb/db1
+```
+Verify `STATUS` field becomes `ServerReady` eventually.
+3. Within the `alpine` container, connect to the server using `psql` terminal via Kubernetes Service named `sqldb-db1-svc`:
+```
+psql -h sqldb-db1-svc -U john
+```
+Input `abc` as password when prompted.
+4. In the `psql` terminal, execute following commands:
+```
+CREATE TABLE account(user_id serial PRIMARY KEY);
+INSERT INTO account(user_id) VALUES (1234);
+SELECT * FROM account;
+```
+5. Verify following output is shown:
 ```
  user_id 
 ---------
@@ -33,13 +56,34 @@ You should see following output:
 
 ##### Backup
 
-1. `kubectl apply -f config/samples/operator_v1alpha1_sqlbackup.yaml`
-2. `kubectl describe sqlbackup/sqlbackup-sample` (wait until `.status.phase` field becomes `BackupSucceeded`)
+1. Create a `SqlBackup` resource named `db1-backup`:
+```
+kubectl apply -f config/samples/db1-backup.yaml
+```
+2. Wait for the backup to become ready:
+```
+kubectl get sqlbackup/db1-backup
+```
+Verify `STATUS` field becomes `BackupSucceeded` eventually.
 
 ##### Restore
-1. `kubectl apply -f config/samples/operator_v1alpha1_restored_sqldb.yaml` (note: `.spec.backupName` field is specified to trigger restore)
-2. `kubectl describe sqldb/sqldb-sample` (wait until `.status.phase` field becomes `ServerRestored`)
-3. `kubectl exec -it sqldb-sample-statefulset-0 /bin/bash`
-4. `psql -c 'SELECT * FROM account;' -U postgres`
-
-Verify that the `1234` user ID data is restored.
+1. Create another `SqlDB` resource named `db2` to bring up `another` PostgreSQL cluster:
+```
+kubectl apply -f config/samples/db2.yaml
+```
+Note that `.spec.backupName` field has been specified to differentiate between server deployment and restore.
+2. Wait for the restore to complete:
+```
+kubectl get sqldb/db2
+```
+Verify `STATUS` field becomes `ServerRestored` eventually.
+3. Within the `alpine` container, connect to the server using `psql` terminal:
+```
+psql -h sqldb-db2-svc -U john
+```
+Input `abc` as password when prompted.
+4. In the `psql` terminal, execute following command:
+```
+SELECT * FROM account;
+```
+Verify that user ID `1234` is found.

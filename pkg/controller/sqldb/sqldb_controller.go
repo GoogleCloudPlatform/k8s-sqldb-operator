@@ -41,6 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	DefaultUsername = "john"
+	DefaultPassword = "abc"
+)
+
 // Add creates a new SqlDB Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -86,7 +91,6 @@ type ReconcileSqlDB struct {
 	scheme *runtime.Scheme
 }
 
-// TODO (sunilarora): Change defaulting codes to a webhook.
 func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
 	var defaulted bool
 
@@ -120,7 +124,6 @@ func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
 	return nil
 }
 
-// TODO (sunilarora): Change validation codes to a webhook.
 func validateFields(instance *operatorv1alpha1.SqlDB) error {
 	if instance.Spec.Type != operatorv1alpha1.PostgreSQL {
 		return fmt.Errorf(".spec.type must be either %q", operatorv1alpha1.PostgreSQL)
@@ -163,19 +166,42 @@ func getSVCTemplate(instanceName string) *corev1.Service {
 	}
 }
 
+// getPVTemplate returns a PersistentVolume template with required disk size in GB.
+func getPVTemplate(diskSizeGB int32, instanceName string) *corev1.PersistentVolume {
+	return &corev1.PersistentVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("sqldb-%s-pv", instanceName),
+		},
+		Spec: corev1.PersistentVolumeSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Capacity: corev1.ResourceList{
+				corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSizeGB)),
+			},
+			PersistentVolumeSource: corev1.PersistentVolumeSource{
+				GCEPersistentDisk: &corev1.GCEPersistentDiskVolumeSource{
+					// Note: The named persistent disk must already exist.
+					PDName: "sqldb-disk",
+				},
+			},
+			StorageClassName: "standard",
+		},
+	}
+}
+
 // getPVCTemplate returns a PersistentVolumeClaim template with required disk size in GB.
-func getPVCTemplate(diskSizeGB int32) *corev1.PersistentVolumeClaim {
+func getPVCTemplate(diskSizeGB int32, instanceName string) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "sqldb-pvc",
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSizeGB)),
 				},
 			},
+			VolumeName: fmt.Sprintf("sqldb-%s-pv", instanceName),
 		},
 	}
 }
@@ -206,7 +232,6 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create a load-balancer Service if the Service is not yet created.
-	// TODO: Figure out what to do with this Service.
 	svc := getSVCTemplate(instance.Name)
 	// Set SqlDB resource to own the service resource.
 	if err := controllerutil.SetControllerReference(instance, svc, r.scheme); err != nil {
@@ -224,9 +249,21 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
+	// Create a PersistentVolume of GCE persistent disk type.
+	pv := getPVTemplate(*instance.Spec.Disk.SizeGB, instance.Name)
+	foundPV := &corev1.PersistentVolume{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: pv.Name}, foundPV)
+	if err != nil && errors.IsNotFound(err) {
+		log.Printf("Creating PersistentVolume %s\n", pv.Name)
+		err = r.Create(context.TODO(), pv)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Define the desired StatefulSet object.
-	// TODO (sunilarora): Secret credentials support.
-	// TODO (sunilarora): Implement db-client to check for health/status of the DB.
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name + "-statefulset",
@@ -250,6 +287,17 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 						{
 							Name:  strings.ToLower(fmt.Sprintf("%s-db", instance.Spec.Type)),
 							Image: fmt.Sprintf("%s:%s", getImageName(string(instance.Spec.Type)), *instance.Spec.Version),
+							// Note: Change username and password credentials accordingly.
+							Env: []corev1.EnvVar{
+								{
+									Name:  "POSTGRES_USER",
+									Value: DefaultUsername,
+								},
+								{
+									Name:  "POSTGRES_PASSWORD",
+									Value: DefaultPassword,
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "sqldb-pvc",
@@ -261,7 +309,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 				},
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				*getPVCTemplate(*instance.Spec.Disk.SizeGB),
+				*getPVCTemplate(*instance.Spec.Disk.SizeGB, instance.Name),
 			},
 			ServiceName: "sqldb-" + instance.Name + "-svc",
 		},
@@ -316,8 +364,9 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 		var cmd string
 		if instance.Spec.Type == operatorv1alpha1.PostgreSQL {
-			cmd = fmt.Sprintf("pg_restore -U postgres -d postgres sqldb/%s", backupFileName)
-			if err = utils.PerformOperation("postgresql-db", cmd); err != nil {
+			// Note: Username will be used as database name.
+			cmd = fmt.Sprintf("pg_restore -U %s -d %s sqldb/%s", DefaultUsername, DefaultUsername, backupFileName)
+			if err = utils.PerformOperation("postgresql-db", instance.Name, cmd); err != nil {
 				return reconcile.Result{}, err
 			}
 		}

@@ -33,6 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	DefaultUsername = "john"
+)
+
 // Add creates a new SqlBackup Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -69,7 +73,6 @@ type ReconcileSqlBackup struct {
 	scheme *runtime.Scheme
 }
 
-// TODO (sunilarora): Change defaulting codes to a webhook.
 func (r *ReconcileSqlBackup) defaultFields(instance *operatorv1alpha1.SqlBackup) error {
 	if instance.Spec.FileName == nil {
 		defaultFileName := "db.dump"
@@ -109,8 +112,9 @@ func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// Trigger backup for PostgreSQL database.
 	if db.Spec.Type == operatorv1alpha1.PostgreSQL {
-		cmd := fmt.Sprintf("pg_dump -h localhost -U postgres -Fc > sqldb/%s", *instance.Spec.FileName)
-		if err = utils.PerformOperation("postgresql-db", cmd); err != nil {
+		cmd := fmt.Sprintf("pg_dump -U %s -Fc > sqldb/%s", DefaultUsername, *instance.Spec.FileName)
+		if err = utils.PerformOperation("postgresql-db", instance.Spec.SqlDBName, cmd); err != nil {
+			fmt.Println(err)
 			// Update status of SqlBackup after the backup has failed.
 			instance.Status.Phase = operatorv1alpha1.BackupFailed
 			if updateErr := r.Update(context.TODO(), instance); updateErr != nil {

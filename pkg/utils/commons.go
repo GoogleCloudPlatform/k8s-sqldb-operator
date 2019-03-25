@@ -31,7 +31,7 @@ import (
 )
 
 // Perform backup or restore operation by running corresponding command "cmd" inside container named "containerName".
-func PerformOperation(containerName, cmd string) error {
+func PerformOperation(containerName, sqlDBName, cmd string) error {
 	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -45,7 +45,7 @@ func PerformOperation(containerName, cmd string) error {
 
 	req := clientset.Core().RESTClient().Post().
 		Resource("pods").
-		Name("sqldb-sample-statefulset-0").
+		Name(fmt.Sprintf("%s-statefulset-0", sqlDBName)).
 		Namespace("default").
 		SubResource("exec")
 	scheme := runtime.NewScheme()

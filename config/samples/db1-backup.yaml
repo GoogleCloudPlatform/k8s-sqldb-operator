@@ -3,7 +3,7 @@ kind: SqlBackup
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
-  name: sqlbackup-sample
+  name: db1-backup
 spec:
-  sqlDBName: sqldb-sample
+  sqlDBName: db1
   fileName: postgresql.dump
