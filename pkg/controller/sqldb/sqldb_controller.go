@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	operatorv1alpha1 "k8s.io/sqldb/pkg/apis/operator/v1alpha1"
+	infrav1alpha1 "k8s.io/sqldb/pkg/apis/infra/v1alpha1"
 	"k8s.io/sqldb/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -66,7 +66,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to SqlDB
-	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.SqlDB{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &infrav1alpha1.SqlDB{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch a StatefulSet created by SqlDB
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &operatorv1alpha1.SqlDB{},
+		OwnerType:    &infrav1alpha1.SqlDB{},
 	})
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ type ReconcileSqlDB struct {
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
+func (r *ReconcileSqlDB) defaultFields(instance *infrav1alpha1.SqlDB) error {
 	var defaulted bool
 
 	if instance.Spec.Version == nil {
@@ -107,7 +107,7 @@ func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
 	}
 
 	if instance.Spec.Disk.Type == nil {
-		defaultDiskType := operatorv1alpha1.ZonalPersistentDisk
+		defaultDiskType := infrav1alpha1.ZonalPersistentDisk
 		instance.Spec.Disk.Type = &defaultDiskType
 		defaulted = true
 	}
@@ -124,16 +124,16 @@ func (r *ReconcileSqlDB) defaultFields(instance *operatorv1alpha1.SqlDB) error {
 	return nil
 }
 
-func validateFields(instance *operatorv1alpha1.SqlDB) error {
-	if instance.Spec.Type != operatorv1alpha1.PostgreSQL {
-		return fmt.Errorf(".spec.type must be either %q", operatorv1alpha1.PostgreSQL)
+func validateFields(instance *infrav1alpha1.SqlDB) error {
+	if instance.Spec.Type != infrav1alpha1.PostgreSQL {
+		return fmt.Errorf(".spec.type must be either %q", infrav1alpha1.PostgreSQL)
 	}
 	return nil
 }
 
 func getImageName(dbType string) string {
 	// For PostgreSQL database.
-	if dbType == string(operatorv1alpha1.PostgreSQL) {
+	if dbType == string(infrav1alpha1.PostgreSQL) {
 		return "postgres"
 	}
 	// For other databases, return empty string for now.
@@ -212,7 +212,7 @@ func getPVCTemplate(diskSizeGB int32, instanceName string) *corev1.PersistentVol
 // +kubebuilder:rbac:groups=operator.k8s.io,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the SqlDB instance.
-	instance := &operatorv1alpha1.SqlDB{}
+	instance := &infrav1alpha1.SqlDB{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -329,7 +329,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		instance.Status.Phase = operatorv1alpha1.ServerDeploymentInProgress
+		instance.Status.Phase = infrav1alpha1.ServerDeploymentInProgress
 		return reconcile.Result{}, r.Update(context.TODO(), instance)
 	} else if err != nil {
 		return reconcile.Result{}, err
@@ -341,7 +341,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Update status of SqlDB accordingly when the StatefulSet is ready.
-	instance.Status.Phase = operatorv1alpha1.ServerReady
+	instance.Status.Phase = infrav1alpha1.ServerReady
 	instance.Status.Endpoint = "sqldb-" + instance.Name + "-svc." + instance.Namespace
 	if err = r.Update(context.TODO(), instance); err != nil {
 		return reconcile.Result{}, err
@@ -350,8 +350,8 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	// After starting the PostgreSQL server, handle from-restore deployment
 	// if it is not yet performed (.status.phase field != ServerRestored)
 	// and .spec.backupName field is specified.
-	if instance.Status.Phase != operatorv1alpha1.ServerRestored && instance.Spec.BackupName != nil {
-		sqlBackup := &operatorv1alpha1.SqlBackup{}
+	if instance.Status.Phase != infrav1alpha1.ServerRestored && instance.Spec.BackupName != nil {
+		sqlBackup := &infrav1alpha1.SqlBackup{}
 		sqlBackupName := *instance.Spec.BackupName
 		err = r.Get(context.TODO(), types.NamespacedName{Name: sqlBackupName, Namespace: instance.Namespace}, sqlBackup)
 		if err != nil && errors.IsNotFound(err) {
@@ -363,7 +363,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 			backupFileName = "db.dump"
 		}
 		var cmd string
-		if instance.Spec.Type == operatorv1alpha1.PostgreSQL {
+		if instance.Spec.Type == infrav1alpha1.PostgreSQL {
 			// Note: Username will be used as database name.
 			cmd = fmt.Sprintf("pg_restore -U %s -d %s sqldb/%s", DefaultUsername, DefaultUsername, backupFileName)
 			if err = utils.PerformOperation("postgresql-db", instance.Name, cmd); err != nil {
@@ -371,7 +371,7 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 			}
 		}
 		// Update status of SqlDB accordingly.
-		instance.Status.Phase = operatorv1alpha1.ServerRestored
+		instance.Status.Phase = infrav1alpha1.ServerRestored
 		if err = r.Update(context.TODO(), instance); err != nil {
 			return reconcile.Result{}, err
 		}

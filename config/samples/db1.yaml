@@ -1,4 +1,4 @@
-apiVersion: operator.k8s.io/v1alpha1
+apiVersion: infra.example.com/v1alpha1
 kind: SqlDB
 metadata:
   labels:

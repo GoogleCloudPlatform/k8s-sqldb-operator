@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	operatorv1alpha1 "k8s.io/sqldb/pkg/apis/operator/v1alpha1"
+	infrav1alpha1 "k8s.io/sqldb/pkg/apis/infra/v1alpha1"
 	"k8s.io/sqldb/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -57,7 +57,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to SqlBackup
-	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.SqlBackup{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &infrav1alpha1.SqlBackup{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ type ReconcileSqlBackup struct {
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileSqlBackup) defaultFields(instance *operatorv1alpha1.SqlBackup) error {
+func (r *ReconcileSqlBackup) defaultFields(instance *infrav1alpha1.SqlBackup) error {
 	if instance.Spec.FileName == nil {
 		defaultFileName := "db.dump"
 		instance.Spec.FileName = &defaultFileName
@@ -87,7 +87,7 @@ func (r *ReconcileSqlBackup) defaultFields(instance *operatorv1alpha1.SqlBackup)
 // +kubebuilder:rbac:groups=operator.k8s.io,resources=sqlbackups,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the SqlBackup instance.
-	instance := &operatorv1alpha1.SqlBackup{}
+	instance := &infrav1alpha1.SqlBackup{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,19 +104,19 @@ func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	// Check existence of SqlDB resource.
-	db := &operatorv1alpha1.SqlDB{}
+	db := &infrav1alpha1.SqlDB{}
 	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.SqlDBName, Namespace: instance.Namespace}, db)
 	if err != nil && errors.IsNotFound(err) {
 		return reconcile.Result{}, fmt.Errorf("SqlDB resource named %q does not exist", instance.Spec.SqlDBName)
 	}
 
 	// Trigger backup for PostgreSQL database.
-	if db.Spec.Type == operatorv1alpha1.PostgreSQL {
+	if db.Spec.Type == infrav1alpha1.PostgreSQL {
 		cmd := fmt.Sprintf("pg_dump -U %s -Fc > sqldb/%s", DefaultUsername, *instance.Spec.FileName)
 		if err = utils.PerformOperation("postgresql-db", instance.Spec.SqlDBName, cmd); err != nil {
 			fmt.Println(err)
 			// Update status of SqlBackup after the backup has failed.
-			instance.Status.Phase = operatorv1alpha1.BackupFailed
+			instance.Status.Phase = infrav1alpha1.BackupFailed
 			if updateErr := r.Update(context.TODO(), instance); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("after failing to perform backup, failed to update SqlBackup: %+v", updateErr)
 			}
@@ -125,7 +125,7 @@ func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	// Update status of SqlBackup after performing the backup successfully.
-	instance.Status.Phase = operatorv1alpha1.BackupSucceeded
+	instance.Status.Phase = infrav1alpha1.BackupSucceeded
 	if updateErr := r.Update(context.TODO(), instance); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("after successfully performing backup, failed to update SqlBackup: %+v", updateErr)
 	}
