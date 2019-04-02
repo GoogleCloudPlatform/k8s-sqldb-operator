@@ -84,7 +84,7 @@ func (r *ReconcileSqlBackup) defaultFields(instance *infrav1alpha1.SqlBackup) er
 
 // Reconcile reads that state of the cluster for a SqlBackup object and makes changes based on the state read
 // and what is in the SqlBackup.Spec
-// +kubebuilder:rbac:groups=operator.k8s.io,resources=sqlbackups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infra.example.com,resources=sqlbackups,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the SqlBackup instance.
 	instance := &infrav1alpha1.SqlBackup{}
@@ -112,9 +112,9 @@ func (r *ReconcileSqlBackup) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// Trigger backup for PostgreSQL database.
 	if db.Spec.Type == infrav1alpha1.PostgreSQL {
-		cmd := fmt.Sprintf("pg_dump -U %s -Fc > sqldb/%s", DefaultUsername, *instance.Spec.FileName)
+		fileName := *instance.Spec.FileName
+		cmd := fmt.Sprintf("pg_dump -U %s -Fc > sqldb/%s", DefaultUsername, fileName)
 		if err = utils.PerformOperation("postgresql-db", instance.Spec.SqlDBName, cmd); err != nil {
-			fmt.Println(err)
 			// Update status of SqlBackup after the backup has failed.
 			instance.Status.Phase = infrav1alpha1.BackupFailed
 			if updateErr := r.Update(context.TODO(), instance); updateErr != nil {

@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -166,50 +165,10 @@ func getSVCTemplate(instanceName string) *corev1.Service {
 	}
 }
 
-// getPVTemplate returns a PersistentVolume template with required disk size in GB.
-func getPVTemplate(diskSizeGB int32, instanceName string) *corev1.PersistentVolume {
-	return &corev1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("sqldb-%s-pv", instanceName),
-		},
-		Spec: corev1.PersistentVolumeSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			Capacity: corev1.ResourceList{
-				corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSizeGB)),
-			},
-			PersistentVolumeSource: corev1.PersistentVolumeSource{
-				GCEPersistentDisk: &corev1.GCEPersistentDiskVolumeSource{
-					// Note: The named persistent disk must already exist.
-					PDName: "sqldb-disk",
-				},
-			},
-			StorageClassName: "standard",
-		},
-	}
-}
-
-// getPVCTemplate returns a PersistentVolumeClaim template with required disk size in GB.
-func getPVCTemplate(diskSizeGB int32, instanceName string) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "sqldb-pvc",
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSizeGB)),
-				},
-			},
-			VolumeName: fmt.Sprintf("sqldb-%s-pv", instanceName),
-		},
-	}
-}
-
 // Reconcile reads that state of the cluster for a SqlDB object and makes changes based on the state read
 // and what is in the SqlDB.Spec
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.k8s.io,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infra.example.com,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the SqlDB instance.
 	instance := &infrav1alpha1.SqlDB{}
@@ -242,20 +201,6 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err != nil && errors.IsNotFound(err) {
 		log.Printf("Creating Service %s/%s\n", svc.Namespace, svc.Name)
 		err = r.Create(context.TODO(), svc)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Create a PersistentVolume of GCE persistent disk type.
-	pv := getPVTemplate(*instance.Spec.Disk.SizeGB, instance.Name)
-	foundPV := &corev1.PersistentVolume{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: pv.Name}, foundPV)
-	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating PersistentVolume %s\n", pv.Name)
-		err = r.Create(context.TODO(), pv)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -300,16 +245,24 @@ func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result,
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "sqldb-pvc",
+									Name:      "nfs-volume",
 									MountPath: "/sqldb",
 								},
 							},
 						},
 					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "nfs-volume",
+							VolumeSource: corev1.VolumeSource{
+								NFS: &corev1.NFSVolumeSource{
+									Server: "nfs-svc.default.svc.cluster.local",
+									Path:   "/",
+								},
+							},
+						},
+					},
 				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				*getPVCTemplate(*instance.Spec.Disk.SizeGB, instance.Name),
 			},
 			ServiceName: "sqldb-" + instance.Name + "-svc",
 		},

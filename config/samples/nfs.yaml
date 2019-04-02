@@ -1,0 +1,35 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs-svc
+spec:
+  selector:
+    role: nfs
+  ports:
+    - name: nfs-tcp
+      port: 2049
+      protocol: TCP
+
+---
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nfs
+  labels:
+    role: nfs
+spec:
+  containers:
+  - name: nfs-server
+    image: itsthenetwork/nfs-server-alpine:latest
+    securityContext:
+      privileged: true
+    env:
+      - name: SHARED_DIRECTORY
+        value: /sqldb
+    volumeMounts:
+    - name: sqldb
+      mountPath: /sqldb
+  volumes:
+  - name: sqldb
+    emptyDir: {}
