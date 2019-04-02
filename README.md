@@ -7,7 +7,7 @@ SqlDB operator is a basic Kubernetes stateful operator that automates creation, 
 2. `SqlBackup`: for **backup** workflow
 
 ## Recommended Versions
-`kubernetes`: `1.11.0` and above
+`kubernetes`: `1.11.0` and above  
 `kubectl`: `1.11.0` and above
 
 ## Example Workflows: PostgreSQL
@@ -16,7 +16,7 @@ All example manifests are located under `config/samples`.
 
 Before starting any of the workflows below, run following commands:
 1. Run the operator:
-`make run`
+`make run`  
 _Note: You can also build an image of the operator and deploy it using a pod._
 
 2. Run a NFS server (for storing backup file):
@@ -73,9 +73,8 @@ _Note: `.spec.backupName` field has been specified to differentiate between inst
 `kubectl get sqldb/db2`  
 Verify `STATUS` field becomes `ServerRestored` eventually.
 
-3. Within the `alpine` container, connect to the instance using `psql` terminal:  
-`psql -h sqldb-db2-svc -U john`  
-Input `abc` as password when prompted.
+3. Within the `alpine` container, connect to the instance using `psql` terminal via Kubernetes Service named `sqldb-db2-svc` (again, username is `john` and password is `abc`):  
+`psql -h sqldb-db2-svc -U john`
 
 4. In the `psql` terminal, execute following command:  
 `SELECT * FROM account;`  
