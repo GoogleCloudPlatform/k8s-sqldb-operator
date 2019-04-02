@@ -12,17 +12,21 @@ SqlDB operator is a basic Kubernetes stateful operator that automates creation, 
 
 ## Example Workflows: PostgreSQL
 
+All example manifests are located under `config/samples`.
+
 Before starting any of the workflows below, run following commands:
 1. Run the operator:
 `make run`
 _Note: You can also build an image of the operator and deploy it using a pod._
 
-2. Run an `alpine` pod and get a shell to its container:  
+2. Run a NFS server (for storing backup file):
+`kubectl apply -f config/samples/nfs.yaml`
+
+3. Run an `alpine` pod and get a shell to its container:  
 `kubectl run --generator=run-pod/v1 --image=alpine:latest -it alpine -- /bin/sh`
 
-3. Install the container with `psql` terminal:  
-`apk add --update postgresql-client`  
-_Note: The operator accesses the PostgreSQL instances with username `john` and password `abc` via a Kubernetes Service resource named `sqldb-<name-of-sqldb>-svc`._
+4. Install the container with `psql` terminal:  
+`apk add --update postgresql-client`
 
 ##### Instance Creation
 
@@ -33,9 +37,8 @@ _Note: The operator accesses the PostgreSQL instances with username `john` and p
 `kubectl get sqldb/db1`  
 Verify `STATUS` field becomes `ServerReady` eventually.
 
-3. Within the `alpine` container, connect to the instance using `psql` terminal via Kubernetes Service named `sqldb-db1-svc`:  
-`psql -h sqldb-db1-svc -U john`  
-Input `abc` as password when prompted.
+3. Within the `alpine` container, connect to the PostgreSQL instance using `psql` terminal via Kubernetes Service named `sqldb-db1-svc` (username is `john` and password is `abc`):  
+`psql -h sqldb-db1-svc -U john`
 
 4. In the `psql` terminal, execute following commands:  
 ```
