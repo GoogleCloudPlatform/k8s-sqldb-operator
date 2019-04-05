@@ -19,26 +19,32 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
+	"log"
 	"strings"
+
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetes "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Perform backup or restore operation by running corresponding command "cmd" inside container named "containerName".
 func PerformOperation(containerName, sqlDBName, cmd string) error {
-	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	// kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+	// config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return err
 	}
@@ -62,7 +68,7 @@ func PerformOperation(containerName, sqlDBName, cmd string) error {
 		Stderr:    true,
 		TTY:       false,
 	}, parameterCodec)
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(cfg, "POST", req.URL())
 	if err != nil {
 		return err
 	}
