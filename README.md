@@ -28,6 +28,12 @@ _Note: You can also build an image of the operator and deploy it using a pod._
 4. Install the container with `psql` terminal:  
 `apk add --update postgresql-client`
 
+To Detech from alpine-shell:
+CTRL-P, CTRL-Q
+
+To reattach to an existing alpine session:
+kubectl attach -it alpine-shell
+
 ##### Instance Creation
 
 1. Create a `SqlDB` resource named `db1` to bring up a PostgreSQL cluster:  

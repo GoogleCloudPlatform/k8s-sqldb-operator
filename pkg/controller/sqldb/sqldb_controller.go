@@ -79,6 +79,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch a Service created by SqlDB
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &infrav1alpha1.SqlDB{},
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -169,6 +178,9 @@ func getSVCTemplate(instanceName string) *corev1.Service {
 // and what is in the SqlDB.Spec
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infra.example.com,resources=sqldbs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infra.example.com,resources=sqlbackups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods/exec,verbs=create;get
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileSqlDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the SqlDB instance.
 	instance := &infrav1alpha1.SqlDB{}

@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= gcr.io/sunilarora-sandbox/sqldb:1.0.2
 
 all: test manager
 
@@ -11,6 +11,9 @@ test: generate fmt vet manifests
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager k8s.io/sqldb/cmd/manager
+
+alpine-up:
+	kubectl run --generator=run-pod/v1 --image=alpine:latest -it alpine -- /bin/sh
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet
@@ -24,6 +27,9 @@ install: manifests
 deploy: manifests
 	kubectl apply -f config/crds
 	kustomize build config/default | kubectl apply -f -
+
+destroy:
+	kustomize build config/default | kubectl delete -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
