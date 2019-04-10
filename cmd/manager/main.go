@@ -19,9 +19,9 @@ package main
 import (
 	"log"
 
+	"github.com/k8s-sqldb-operator/pkg/apis"
+	"github.com/k8s-sqldb-operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/sqldb/pkg/apis"
-	"k8s.io/sqldb/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"

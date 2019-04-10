@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	infrav1alpha1 "github.com/k8s-sqldb-operator/pkg/apis/infra/v1alpha1"
+	"github.com/k8s-sqldb-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	infrav1alpha1 "k8s.io/sqldb/pkg/apis/infra/v1alpha1"
-	"k8s.io/sqldb/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

@@ -20,12 +20,12 @@ import (
 	"testing"
 	"time"
 
+	infrav1alpha1 "github.com/k8s-sqldb-operator/pkg/apis/infra/v1alpha1"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	infrav1alpha1 "k8s.io/sqldb/pkg/apis/infra/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"

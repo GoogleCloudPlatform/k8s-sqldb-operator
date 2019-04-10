@@ -17,7 +17,7 @@ limitations under the License.
 package apis
 
 import (
-	"k8s.io/sqldb/pkg/apis/infra/v1alpha1"
+	"github.com/k8s-sqldb-operator/pkg/apis/infra/v1alpha1"
 )
 
 func init() {
