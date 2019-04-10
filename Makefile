@@ -10,7 +10,7 @@ test: generate fmt vet manifests
 
 # Build manager binary
 manager: generate fmt vet
-	go build -o bin/manager k8s.io/sqldb/cmd/manager
+	go build -o bin/manager github.com/k8s-sqldb-operator/cmd/manager
 
 alpine-up:
 	kubectl run --generator=run-pod/v1 --image=alpine:latest -it alpine -- /bin/sh

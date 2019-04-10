@@ -17,7 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"k8s.io/sqldb/pkg/controller/sqldb"
+	"github.com/k8s-sqldb-operator/pkg/controller/sqldb"
 )
 
 func init() {
